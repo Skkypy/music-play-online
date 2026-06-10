@@ -95,17 +95,15 @@ MIT License
 
 ### 支付宝
 
-<img src="assets/alipay-qr.png" alt="支付宝" width="200"/>
+<img src="assets/alipay-qr.jpg" alt="支付宝" width="200"/>
 
 ### 微信
 
-<img src="assets/wechat-qr.png" alt="微信" width="200"/>
+<img src="assets/wechatpay_qr.png" alt="微信" width="200"/>
 
 ### 其他方式
 
-- [GitHub Sponsors](https://github.com/sponsors/YOUR_USERNAME)
-- [ko-fi](https://ko-fi.com/YOUR_USERNAME)
-- [Buy Me a Coffee](https://www.buymeacoffee.com/YOUR_USERNAME)
+- [GitHub Sponsors](https://github.com/sponsors/skkypy)
 
 ---
 
