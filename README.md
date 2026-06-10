@@ -16,7 +16,7 @@
 2. 打开 Chrome，访问 `chrome://extensions/`
 3. 开启右上角「开发者模式」
 4. 点击「加载已解压的扩展程序」
-5. 选择本项目的 `src` 文件夹
+5. 选择本项目的 `music-play-online` 文件夹
 
 ## 使用方法
 
@@ -71,7 +71,7 @@
 ## 文件结构
 
 ```
-src/
+music-play-online/
 ├── manifest.json      # 扩展配置
 ├── background/
 │   └── background.js  # 后台服务脚本
