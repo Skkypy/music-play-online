@@ -134,7 +134,7 @@
         transition: all 0.2s;
       }
       .mpo-control-btn:hover {
-        background: #f0f0f0;
+        background: rgba(102, 126, 234, 0.1);
       }
       .mpo-control-btn.play-btn {
         width: 40px;
@@ -298,10 +298,10 @@
           <div class="mpo-author">-</div>
         </div>
         <div class="mpo-controls">
-          <button class="mpo-control-btn prev-btn" title="上一首">⏮</button>
-          <button class="mpo-control-btn play-btn" title="播放/暂停">▶</button>
-          <button class="mpo-control-btn next-btn" title="下一首">⏭</button>
-          <button class="mpo-control-btn playlist-btn" title="播放列表">☰</button>
+          <button class="mpo-control-btn prev-btn" title="上一首"><i class="fa fa-step-backward"></i></button>
+          <button class="mpo-control-btn play-btn" title="播放/暂停"><i class="fa fa-play"></i></button>
+          <button class="mpo-control-btn next-btn" title="下一首"><i class="fa fa-step-forward"></i></button>
+          <button class="mpo-control-btn playlist-btn" title="播放列表"><i class="fa fa-list"></i></button>
         </div>
       </div>
       <div class="mpo-progress">
@@ -589,7 +589,10 @@
 
   function updatePlayButton() {
     const btn = document.querySelector('.play-btn');
-    if (btn) btn.textContent = isPlaying ? '⏸' : '▶';
+    if (btn) {
+      const icon = btn.querySelector('i') || btn;
+      icon.className = isPlaying ? 'fa fa-pause' : 'fa fa-play';
+    }
   }
 
   function formatTime(seconds) {
