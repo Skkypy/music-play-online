@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Music Play Online</title>
+  <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
   <style>
     * {
       margin: 0;
@@ -90,7 +91,7 @@
       transition: all 0.2s;
     }
     .control-btn:hover {
-      background: #e0e0e0;
+      background: rgba(102, 126, 234, 0.2);
       transform: scale(1.05);
     }
     .control-btn.play {
@@ -258,10 +259,10 @@
   </style>
 </head>
 <body>
-  <div class="header">
+  <!-- <div class="header">
     <h1>🎵 Music Play Online</h1>
     <p>聚合多源音乐播放</p>
-  </div>
+  </div> -->
 
   <div class="current-play">
     <img class="current-cover" id="currentCover" src="" alt="">
@@ -269,12 +270,12 @@
       <div class="current-title" id="currentTitle">未播放</div>
       <div class="current-author" id="currentAuthor">-</div>
       <div class="controls">
-        <button class="control-btn" id="prevBtn">⏮</button>
-        <button class="control-btn play" id="playBtn">▶</button>
-        <button class="control-btn" id="nextBtn">⏭</button>
+        <button class="control-btn" id="prevBtn"><i class="fa fa-step-backward"></i></button>
+        <button class="control-btn play" id="playBtn"><i class="fa fa-play"></i></button>
+        <button class="control-btn" id="nextBtn"><i class="fa fa-step-forward"></i></button>
       </div>
       <div class="volume-control">
-        <span style="font-size:12px">🔊</span>
+        <span style="font-size:12px"><i class="fa fa-volume-up"></i></span>
         <div class="volume-slider" id="volumeSlider">
           <div class="volume-fill" id="volumeFill"></div>
         </div>
