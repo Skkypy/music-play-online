@@ -101,10 +101,6 @@ MIT License
 
 <img src="assets/wechat_qr.png" alt="微信" width="200"/>
 
-### 其他方式
-
-- [GitHub Sponsors](https://github.com/sponsors/skkypy)
-
 ---
 
 **Copyright © 2024-2026 Music Play Online. All rights reserved.**

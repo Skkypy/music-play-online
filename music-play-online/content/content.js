@@ -761,13 +761,80 @@
     }
   }
 
+  function injectAddAllButton() {
+    if (document.querySelector('.mpo-add-all-btn')) return;
+
+    const headers = document.querySelectorAll('.card-body .row');
+    let headerOpCol = null;
+
+    for (const row of headers) {
+      if (row.textContent.includes('歌曲') && row.textContent.includes('操作')) {
+        const cols = row.querySelectorAll('[class*="col-"]');
+        for (const col of cols) {
+          if (col.classList.contains('text-right') || col.textContent.trim() === '操作') {
+            headerOpCol = col;
+            break;
+          }
+        }
+        break;
+      }
+    }
+
+    if (!headerOpCol) {
+      console.log('MPO: Could not find header operation column');
+      return;
+    }
+
+    const btn = document.createElement('button');
+    btn.className = 'mpo-btn mpo-btn-primary mpo-add-all-btn';
+    btn.textContent = '＋ 一键添加本页';
+    btn.title = '一键添加本页所有歌曲到播放列表';
+    btn.style.marginRight = '8px';
+    btn.style.padding = '4px 10px';
+    btn.style.fontSize = '12px';
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      btn.textContent = '添加中...';
+
+      const songRows = document.querySelectorAll('.card-body .row.no-gutters');
+      let addedCount = 0;
+
+      for (const row of songRows) {
+        const link = row.querySelector('a[href*="/music/"]');
+        if (!link) continue;
+
+        const match = link.href.match(/gequbao\.com\/music\/(\d+)/);
+        if (!match) continue;
+
+        const musicId = match[1];
+        const music = await fetchMusicInfo(musicId);
+        if (music && addToPlaylist(music)) {
+          addedCount++;
+        }
+      }
+
+      btn.textContent = `已添加 ${addedCount} 首`;
+      setTimeout(() => {
+        btn.textContent = '＋ 一键添加本页';
+        btn.disabled = false;
+      }, 2000);
+    });
+
+    headerOpCol.insertBefore(btn, headerOpCol.firstChild);
+    console.log('MPO: Added "Add All" button to header');
+  }
+
   function injectAddButton() {
-    if (document.querySelector('.mpo-add-btn') || document.querySelector('.mpo-add-current-btn')) return;
+    if (document.querySelector('.mpo-add-current-btn')) return;
 
     const isTopicPage = window.location.pathname.startsWith('/topic/');
     const isMusicPage = window.location.pathname.startsWith('/music/');
 
     if (!isTopicPage && !isMusicPage) return;
+
+    if (isTopicPage && !document.querySelector('.mpo-add-all-btn')) {
+      injectAddAllButton();
+    }
 
     if (isMusicPage) {
       const titleEl = document.querySelector('.song-title-styled');
@@ -806,6 +873,8 @@
     }
 
     if (isTopicPage) {
+      injectAddAllButton();
+
       const containers = document.querySelectorAll('.col-4.col-md-3.text-right');
       containers.forEach((container) => {
         if (container.querySelector('.mpo-add-btn')) return;
