@@ -95,11 +95,11 @@ MIT License
 
 ### 支付宝
 
-<img src="assets/alipay-qr.jpg" alt="支付宝" width="200"/>
+<img src="assets/alipay_qr.jpg" alt="支付宝" width="200"/>
 
 ### 微信
 
-<img src="assets/wechatpay_qr.png" alt="微信" width="200"/>
+<img src="assets/wechat_qr.png" alt="微信" width="200"/>
 
 ### 其他方式
 
