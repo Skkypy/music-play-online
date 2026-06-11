@@ -460,46 +460,17 @@
     if (isTopicPage) {
       console.log('MPO: Opening music page to get audio URL...');
       isFetchingAudioUrl = true;
-      const musicPageUrl = `https://www.gequbao.com/music/${currentMusic.id}`;
-      const newTab = window.open(musicPageUrl, '_blank');
-
-      if (newTab) {
-        const checkInterval = setInterval(() => {
-          newTab.postMessage({ action: 'getAudioUrl' }, '*');
-        }, 1000);
-
-        const timeout = setTimeout(() => {
-          clearInterval(checkInterval);
-          clearTimeout(checkInterval);
-          isFetchingAudioUrl = false;
-        }, 10000);
-
-        window.addEventListener('message', (e) => {
-          if (e.data && e.data.audioUrl) {
-            clearInterval(checkInterval);
-            clearTimeout(timeout);
-            isFetchingAudioUrl = false;
-            console.log('MPO: Got audio URL from new tab:', e.data.audioUrl);
-            currentMusic.audioUrl = e.data.audioUrl;
-            audio.src = e.data.audioUrl;
-            audio.play().catch(err => console.error('MPO: Play failed:', err));
-            saveState();
-            updatePlaylistUI();
-            newTab.close();
-          }
-        }, { once: true });
-      } else {
-        isFetchingAudioUrl = false;
-      }
+      const fetchId = Date.now() + '_' + currentMusic.id;
+      chrome.storage.local.set({ fetchAudioFor: { id: currentMusic.id, fetchId } });
+      const musicPageUrl = `https://www.gequbao.com/music/${currentMusic.id}?fetch=${fetchId}`;
+      window.open(musicPageUrl);
       return;
     }
 
-    console.log('MPO: Requesting audio URL from background for', currentMusic.id);
     chrome.runtime.sendMessage({
       action: 'getAudioUrl',
       musicId: currentMusic.id
     }, (url) => {
-      console.log('MPO: Got audio URL from background:', url);
       if (url) {
         currentMusic.audioUrl = url;
         audio.src = url;
@@ -507,8 +478,12 @@
         saveState();
         updatePlaylistUI();
       } else {
-        console.log('MPO: Could not get audio URL');
-        alert('无法获取音频链接，请先打开该歌曲页面加载播放器');
+        console.log('MPO: Opening music page...');
+        isFetchingAudioUrl = true;
+        const fetchId = Date.now() + '_' + currentMusic.id;
+        chrome.storage.local.set({ fetchAudioFor: { id: currentMusic.id, fetchId } });
+        const musicPageUrl = `https://www.gequbao.com/music/${currentMusic.id}?fetch=${fetchId}`;
+        window.open(musicPageUrl);
       }
     });
   }
@@ -530,6 +505,22 @@
       }
     }
     return null;
+  }
+
+  function checkForFetchedAudioUrl() {
+    chrome.storage.local.get(['fetchedAudioUrl', 'fetchAudioFor'], (result) => {
+      console.log('MPO: Checking fetchedAudioUrl:', result.fetchedAudioUrl, 'for:', result.fetchAudioFor?.id, 'current:', currentMusic?.id);
+      if (result.fetchedAudioUrl && result.fetchAudioFor && result.fetchAudioFor.id === currentMusic?.id) {
+        chrome.storage.local.remove(['fetchedAudioUrl', 'fetchAudioFor']);
+        isFetchingAudioUrl = false;
+        console.log('MPO: Found fetched audio URL:', result.fetchedAudioUrl);
+        currentMusic.audioUrl = result.fetchedAudioUrl;
+        audio.src = result.fetchedAudioUrl;
+        audio.play().catch(err => console.error('MPO: Play failed:', err));
+        saveState();
+        updatePlaylistUI();
+      }
+    });
   }
 
   function handleEnded() {
@@ -967,44 +958,59 @@
   }
 
   chrome.storage.onChanged.addListener((changes, areaName) => {
-    if (areaName === 'local' && changes[PLAYLIST_KEY]) {
-      console.log('MPO: storage changed, old:', changes[PLAYLIST_KEY].oldValue?.length, 'new:', changes[PLAYLIST_KEY].newValue?.length);
-      playlist = changes[PLAYLIST_KEY].newValue || [];
-      if (currentIndex >= playlist.length) {
-        currentIndex = Math.max(0, playlist.length - 1);
+    if (areaName === 'local') {
+      if (changes[PLAYLIST_KEY]) {
+        console.log('MPO: playlist changed');
+        playlist = changes[PLAYLIST_KEY].newValue || [];
+        if (currentIndex >= playlist.length) {
+          currentIndex = Math.max(0, playlist.length - 1);
+        }
+        updateUI();
       }
-      updateUI();
-    }
-  });
-
-  window.addEventListener('message', (e) => {
-    if (e.data && e.data.action === 'provideAudioUrl' && e.data.audioUrl) {
-      console.log('MPO: Received audio URL from music page:', e.data.audioUrl);
-      isFetchingAudioUrl = false;
-      const currentMusicItem = playlist[currentIndex];
-      if (currentMusicItem) {
-        currentMusicItem.audioUrl = e.data.audioUrl;
-        audio.src = e.data.audioUrl;
-        audio.play().catch(err => console.error('MPO: Play failed:', err));
-        saveState();
-        updatePlaylistUI();
-      }
-    }
-
-    if (e.data && e.data.action === 'getAudioUrl' && window.location.pathname.startsWith('/music/')) {
-      const audioEl = document.querySelector('#custom-audio-player');
-      if (audioEl && audioEl.src && audioEl.src !== window.location.href) {
-        console.log('MPO: Music page sending audio URL:', audioEl.src);
-        e.source.postMessage({ action: 'provideAudioUrl', audioUrl: audioEl.src }, e.origin);
-      } else {
-        const downloadBtn = document.querySelector('#btn-download-mp3');
-        if (downloadBtn && downloadBtn.href) {
-          console.log('MPO: Music page sending download URL:', downloadBtn.href);
-          e.source.postMessage({ action: 'provideAudioUrl', audioUrl: downloadBtn.href }, e.origin);
+      if (changes.fetchedAudioUrl && changes.fetchAudioFor) {
+        console.log('MPO: storage changed for audio fetch');
+        if (isFetchingAudioUrl) {
+          checkForFetchedAudioUrl();
         }
       }
     }
   });
+
+  window.addEventListener('message', (e) => {
+    if (e.data && e.data.action === 'getAudioUrl' && window.location.pathname.startsWith('/music/')) {
+      const audioEl = document.querySelector('#custom-audio-player');
+      const audioUrl = audioEl && audioEl.src && audioEl.src !== window.location.href ? audioEl.src : null;
+      const downloadBtn = document.querySelector('#btn-download-mp3');
+      const downloadUrl = downloadBtn && downloadBtn.href ? downloadBtn.href : null;
+
+      const finalUrl = audioUrl || downloadUrl;
+      if (finalUrl && e.source) {
+        console.log('MPO: Music page sending audio URL:', finalUrl);
+        e.source.postMessage({ audioUrl: finalUrl }, e.origin);
+      }
+    }
+  });
+
+  setInterval(() => {
+    if (window.location.search.includes('fetch=')) {
+      const audioEl = document.querySelector('#custom-audio-player');
+      const audioUrl = audioEl && audioEl.src && audioEl.src !== window.location.href ? audioEl.src : null;
+      const downloadBtn = document.querySelector('#btn-download-mp3');
+      const downloadUrl = downloadBtn && downloadBtn.href ? downloadBtn.href : null;
+      const finalUrl = audioUrl || downloadUrl;
+
+      if (finalUrl) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const fetchId = urlParams.get('fetch');
+        const musicId = window.location.pathname.split('/').pop();
+        console.log('MPO: Auto-setting audio URL for fetch:', finalUrl);
+        chrome.storage.local.set({
+          fetchedAudioUrl: finalUrl,
+          fetchAudioFor: { id: musicId, fetchId: fetchId }
+        });
+      }
+    }
+  }, 1000);
 
   startObserver();
 })();
