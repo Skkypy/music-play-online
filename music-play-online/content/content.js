@@ -16,7 +16,7 @@
   let isPlaying = false;
   let currentMusic = null;
   let shuffledIndices = [];
-  let isFetchingAudioUrl = false;
+
 
   function init() {
     loadState();
@@ -408,11 +408,6 @@
   function playNext() {
     if (playlist.length === 0) return;
 
-    if (isFetchingAudioUrl) {
-      console.log('MPO: Still fetching audio URL, skip this playNext');
-      return;
-    }
-
     if (playMode === PlayMode.SINGLE) {
       audio.currentTime = 0;
       audio.play().catch(e => console.log('Play failed:', e));
@@ -456,36 +451,11 @@
       return;
     }
 
-    const isTopicPage = window.location.pathname.startsWith('/topic/');
-    if (isTopicPage) {
-      console.log('MPO: Opening music page to get audio URL...');
-      isFetchingAudioUrl = true;
-      const fetchId = Date.now() + '_' + currentMusic.id;
-      chrome.storage.local.set({ fetchAudioFor: { id: currentMusic.id, fetchId } });
-      const musicPageUrl = `https://www.gequbao.com/music/${currentMusic.id}?fetch=${fetchId}`;
-      window.open(musicPageUrl);
-      return;
-    }
-
-    chrome.runtime.sendMessage({
-      action: 'getAudioUrl',
-      musicId: currentMusic.id
-    }, (url) => {
-      if (url) {
-        currentMusic.audioUrl = url;
-        audio.src = url;
-        audio.play().catch(e => console.error('MPO: Play failed:', e));
-        saveState();
-        updatePlaylistUI();
-      } else {
-        console.log('MPO: Opening music page...');
-        isFetchingAudioUrl = true;
-        const fetchId = Date.now() + '_' + currentMusic.id;
-        chrome.storage.local.set({ fetchAudioFor: { id: currentMusic.id, fetchId } });
-        const musicPageUrl = `https://www.gequbao.com/music/${currentMusic.id}?fetch=${fetchId}`;
-        window.open(musicPageUrl);
-      }
-    });
+    console.log('MPO: Opening music page to get audio URL...');
+    const fetchId = 'f' + Date.now();
+    const musicPageUrl = `https://www.gequbao.com/music/${currentMusic.id}?fetch=${fetchId}&mpo=1`;
+    window.open(musicPageUrl);
+    startPollingForFetchedAudioUrl(fetchId);
   }
 
   function getAudioUrlFromPage() {
@@ -507,28 +477,30 @@
     return null;
   }
 
-  function checkForFetchedAudioUrl() {
-    chrome.storage.local.get(['fetchedAudioUrl', 'fetchAudioFor'], (result) => {
-      console.log('MPO: Checking fetchedAudioUrl:', result.fetchedAudioUrl, 'for:', result.fetchAudioFor?.id, 'current:', currentMusic?.id);
-      if (result.fetchedAudioUrl && result.fetchAudioFor && result.fetchAudioFor.id === currentMusic?.id) {
-        chrome.storage.local.remove(['fetchedAudioUrl', 'fetchAudioFor']);
-        isFetchingAudioUrl = false;
-        console.log('MPO: Found fetched audio URL:', result.fetchedAudioUrl);
-        currentMusic.audioUrl = result.fetchedAudioUrl;
-        audio.src = result.fetchedAudioUrl;
-        audio.play().catch(err => console.error('MPO: Play failed:', err));
-        saveState();
-        updatePlaylistUI();
-      }
-    });
+  function startPollingForFetchedAudioUrl(fetchId, attempt = 0) {
+    const maxAttempts = 15;
+    const delay = attempt === 0 ? 2000 : 1500;
+    setTimeout(() => {
+      chrome.storage.local.get(['fetchedAudioUrl', 'fetchAudioFor'], (result) => {
+        if (result.fetchedAudioUrl && result.fetchAudioFor && result.fetchAudioFor.fetchId === fetchId) {
+          chrome.storage.local.remove(['fetchedAudioUrl', 'fetchAudioFor']);
+          console.log('MPO: Found fetched audio URL:', result.fetchedAudioUrl);
+          currentMusic.audioUrl = result.fetchedAudioUrl;
+          audio.src = result.fetchedAudioUrl;
+          audio.play().catch(err => console.error('MPO: Play failed:', err));
+          saveState();
+          updatePlaylistUI();
+        } else if (attempt < maxAttempts) {
+          console.log('MPO: Audio URL not ready, retrying...', attempt + 1);
+          startPollingForFetchedAudioUrl(fetchId, attempt + 1);
+        } else {
+          console.log('MPO: Failed to fetch audio URL after max attempts');
+        }
+      });
+    }, delay);
   }
 
   function handleEnded() {
-    if (isFetchingAudioUrl) {
-      console.log('MPO: Still fetching audio URL, waiting...');
-      return;
-    }
-
     if (playMode === PlayMode.SINGLE) {
       audio.currentTime = 0;
       audio.play();
@@ -967,12 +939,7 @@
         }
         updateUI();
       }
-      if (changes.fetchedAudioUrl && changes.fetchAudioFor) {
-        console.log('MPO: storage changed for audio fetch');
-        if (isFetchingAudioUrl) {
-          checkForFetchedAudioUrl();
-        }
-      }
+
     }
   });
 
@@ -991,25 +958,28 @@
     }
   });
 
-  setInterval(() => {
-    if (window.location.search.includes('fetch=')) {
-      const audioEl = document.querySelector('#custom-audio-player');
-      const audioUrl = audioEl && audioEl.src && audioEl.src !== window.location.href ? audioEl.src : null;
-      const downloadBtn = document.querySelector('#btn-download-mp3');
-      const downloadUrl = downloadBtn && downloadBtn.href ? downloadBtn.href : null;
-      const finalUrl = audioUrl || downloadUrl;
+  const fetchIntervalId = setInterval(() => {
+    if (!window.location.search.includes('fetch=')) return;
 
-      if (finalUrl) {
-        const urlParams = new URLSearchParams(window.location.search);
-        const fetchId = urlParams.get('fetch');
-        const musicId = window.location.pathname.split('/').pop();
-        console.log('MPO: Auto-setting audio URL for fetch:', finalUrl);
-        chrome.storage.local.set({
-          fetchedAudioUrl: finalUrl,
-          fetchAudioFor: { id: musicId, fetchId: fetchId }
-        });
-      }
-    }
+    const audioEl = document.querySelector('#custom-audio-player');
+    const audioUrl = audioEl && audioEl.src && audioEl.src !== window.location.href ? audioEl.src : null;
+    const downloadBtn = document.querySelector('#btn-download-mp3');
+    const downloadUrl = downloadBtn && downloadBtn.href ? downloadBtn.href : null;
+    const finalUrl = audioUrl || downloadUrl;
+
+    if (!finalUrl) return;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const fetchId = urlParams.get('fetch');
+    const musicId = window.location.pathname.split('/').pop();
+    console.log('MPO: Auto-setting audio URL for fetch:', finalUrl);
+    chrome.storage.local.set({
+      fetchedAudioUrl: finalUrl,
+      fetchAudioFor: { id: musicId, fetchId: fetchId }
+    }, () => {
+      clearInterval(fetchIntervalId);
+      window.close();
+    });
   }, 1000);
 
   startObserver();
