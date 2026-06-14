@@ -734,12 +734,22 @@
           break;
         case 'loadPlaylist':
           if (request.songs && request.songs.length > 0) {
-            playlist = request.songs.map(s => ({ ...s }));
-            currentIndex = request.playIndex !== undefined ? request.playIndex : 0;
-            if (playMode === PlayMode.SHUFFLE) generateShuffledIndices();
-            saveState();
-            updateUI();
-            playByIndex(currentIndex);
+            const beforeLen = playlist.length;
+            for (const s of request.songs) {
+              if (!playlist.find(m => m.id === s.id)) {
+                playlist.push({ ...s });
+              }
+            }
+            const added = playlist.length - beforeLen;
+            if (added > 0) {
+              const targetIndex = request.playIndex !== undefined
+                ? beforeLen + request.playIndex
+                : currentIndex;
+              if (playMode === PlayMode.SHUFFLE) generateShuffledIndices();
+              saveState();
+              updateUI();
+              playByIndex(targetIndex);
+            }
           }
           sendResponse({ success: true });
           break;
