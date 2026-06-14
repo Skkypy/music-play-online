@@ -110,6 +110,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       });
       return true;
 
+    case 'fetchHotSongs':
+      fetchHotSongs().then(songs => sendResponse(songs));
+      return true;
+
     case 'setPlayMode':
       chrome.storage.local.set({ [PLAY_MODE_KEY]: request.mode });
       sendResponse({ success: true });
@@ -150,5 +154,85 @@ async function fetchMusicInfo(musicId) {
   } catch (error) {
     console.error('Failed to fetch music info:', error);
     return null;
+  }
+}
+
+async function fetchHotSongs() {
+  const url = 'https://www.gequbao.com/s/%E6%8A%96%E9%9F%B3%E7%83%AD%E6%AD%8C';
+  try {
+    const response = await fetch(url);
+    const html = await response.text();
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+
+    const songs = [];
+    const linkEls = doc.querySelectorAll('a[href*="/music/"]');
+    const seen = new Set();
+
+    for (const link of linkEls) {
+      const match = link.href.match(/\/music\/(\d+)/);
+      if (!match) continue;
+      const musicId = match[1];
+      if (seen.has(musicId)) continue;
+      seen.add(musicId);
+
+      const row = link.closest('.row, .list-group-item, li, tr') || link.parentElement;
+      const rowText = row ? row.textContent : link.textContent;
+
+      const artistHint = row.querySelector('.text-muted, .song-author, .artist, small') ||
+                         row.querySelector('a[href*="/artist/"]');
+
+      songs.push({
+        id: musicId,
+        title: link.textContent.trim() || 'Unknown',
+        author: artistHint ? artistHint.textContent.trim() : 'Unknown',
+        cover: '',
+        source: 'gequbao',
+        sourceUrl: `https://www.gequbao.com/music/${musicId}`
+      });
+    }
+
+    if (songs.length === 0) {
+      const rows = doc.querySelectorAll('.card-body .row, .table tr, .list-group-item');
+      for (const row of rows) {
+        const link = row.querySelector('a[href*="/music/"]');
+        if (!link) continue;
+        const match = link.href.match(/\/music\/(\d+)/);
+        if (!match || seen.has(match[1])) continue;
+        seen.add(match[1]);
+
+        songs.push({
+          id: match[1],
+          title: link.textContent.trim() || 'Unknown',
+          author: 'Unknown',
+          cover: '',
+          source: 'gequbao',
+          sourceUrl: `https://www.gequbao.com/music/${match[1]}`
+        });
+      }
+    }
+
+    if (songs.length === 0) {
+      const allLinks = doc.querySelectorAll('a');
+      for (const link of allLinks) {
+        const match = link.href.match(/\/music\/(\d+)/);
+        if (!match || seen.has(match[1])) continue;
+        seen.add(match[1]);
+        songs.push({
+          id: match[1],
+          title: link.textContent.trim() || match[1],
+          author: 'Unknown',
+          cover: '',
+          source: 'gequbao',
+          sourceUrl: `https://www.gequbao.com/music/${match[1]}`
+        });
+      }
+    }
+
+    console.log('Background: Fetched', songs.length, 'hot songs');
+    return songs;
+  } catch (error) {
+    console.error('Failed to fetch hot songs:', error);
+    return [];
   }
 }

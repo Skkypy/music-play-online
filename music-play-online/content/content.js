@@ -827,10 +827,11 @@
 
     const isTopicPage = window.location.pathname.startsWith('/topic/');
     const isMusicPage = window.location.pathname.startsWith('/music/');
+    const isSearchPage = window.location.pathname.startsWith('/s/');
 
-    if (!isTopicPage && !isMusicPage) return;
+    if (!isTopicPage && !isMusicPage && !isSearchPage) return;
 
-    if (isTopicPage && !document.querySelector('.mpo-add-all-btn')) {
+    if ((isTopicPage || isSearchPage) && !document.querySelector('.mpo-add-all-btn')) {
       injectAddAllButton();
     }
 
@@ -870,10 +871,11 @@
       }
     }
 
-    if (isTopicPage) {
+    if (isTopicPage || isSearchPage) {
       injectAddAllButton();
 
-      const containers = document.querySelectorAll('.col-4.col-md-3.text-right');
+      const containerSelector = isSearchPage ? '.col-3.col-md-4.text-right' : '.col-4.col-md-3.text-right';
+      const containers = document.querySelectorAll(containerSelector);
       containers.forEach((container) => {
         if (container.querySelector('.mpo-add-btn')) return;
 
