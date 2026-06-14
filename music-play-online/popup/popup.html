@@ -6,307 +6,169 @@
   <title>Music Play Online</title>
   <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       width: 360px;
-      min-height: 400px;
+      min-height: 300px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: #333;
     }
     .header {
       background: rgba(255,255,255,0.95);
-      padding: 16px;
+      padding: 14px 16px;
       border-radius: 0 0 20px 20px;
       box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
     .header h1 {
-      font-size: 18px;
+      font-size: 16px;
       font-weight: 700;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
     }
-    .header p {
-      font-size: 12px;
-      color: #888;
-      margin-top: 4px;
-    }
-    .current-play {
-      background: rgba(255,255,255,0.95);
-      margin: 16px;
-      padding: 16px;
-      border-radius: 16px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-    }
-    .current-cover {
-      width: 56px;
-      height: 56px;
-      border-radius: 12px;
-      object-fit: cover;
-      background: #f0f0f0;
-    }
-    .current-info {
-      flex: 1;
-      min-width: 0;
-    }
-    .current-title {
-      font-weight: 600;
+    .header .header-btn {
+      background: none;
+      border: none;
+      color: #667eea;
+      cursor: pointer;
       font-size: 14px;
-      white-space: nowrap;
+      padding: 4px 8px;
+      border-radius: 8px;
+    }
+    .header .header-btn:hover { background: rgba(102,126,234,0.1); }
+    .header .header-btn:disabled { opacity: 0.3; cursor: default; }
+
+    .view {
+      background: rgba(255,255,255,0.95);
+      margin: 12px 16px;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
       overflow: hidden;
-      text-overflow: ellipsis;
     }
-    .current-author {
-      font-size: 12px;
-      color: #888;
-      margin-top: 4px;
-    }
-    .controls {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      margin-top: 8px;
-    }
-    .control-btn {
-      width: 36px;
-      height: 36px;
-      border: none;
-      border-radius: 50%;
-      background: #f0f0f0;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      transition: all 0.2s;
-    }
-    .control-btn:hover {
-      background: rgba(102, 126, 234, 0.2);
-      transform: scale(1.05);
-    }
-    .control-btn.play {
-      width: 48px;
-      height: 48px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-    }
-    .mode-controls {
-      background: rgba(255,255,255,0.95);
-      margin: 0 16px;
+    .view-title {
       padding: 12px 16px;
-      border-radius: 16px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-    }
-    .mode-label {
+      font-weight: 600;
       font-size: 13px;
-      font-weight: 600;
+      color: #888;
+      border-bottom: 1px solid #f0f0f0;
     }
-    .mode-btns {
-      display: flex;
-      gap: 6px;
-    }
-    .mode-btn {
-      padding: 6px 12px;
-      border: none;
-      border-radius: 20px;
-      font-size: 12px;
-      cursor: pointer;
-      background: #f0f0f0;
-      color: #666;
-      transition: all 0.2s;
-    }
-    .mode-btn.active {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-    }
-    .playlist-section {
-      background: rgba(255,255,255,0.95);
-      margin: 16px;
-      padding: 16px;
-      border-radius: 16px;
-      max-height: 300px;
-      display: flex;
-      flex-direction: column;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-    }
-    .playlist-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-    .playlist-title {
-      font-weight: 600;
-      font-size: 14px;
-    }
-    .clear-btn {
-      padding: 4px 10px;
-      border: none;
-      border-radius: 12px;
-      font-size: 11px;
-      background: #f0f0f0;
-      color: #666;
-      cursor: pointer;
-    }
-    .clear-btn:hover {
-      background: #e0e0e0;
-    }
-    .playlist-body {
-      flex: 1;
+    .list-body {
+      max-height: 400px;
       overflow-y: auto;
     }
+
     .playlist-item {
       display: flex;
       align-items: center;
-      padding: 8px;
-      gap: 10px;
-      border-radius: 8px;
+      padding: 12px 16px;
+      gap: 12px;
       cursor: pointer;
       transition: background 0.2s;
+      border-bottom: 1px solid #f5f5f5;
     }
-    .playlist-item:hover {
-      background: #f5f5f5;
+    .playlist-item:last-child { border-bottom: none; }
+    .playlist-item:hover { background: #f5f5f5; }
+    .playlist-icon {
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex; align-items: center;
+      justify-content: center;
+      color: white; font-size: 18px;
+      flex-shrink: 0;
     }
-    .playlist-item.active {
-      background: linear-gradient(135deg, rgba(102,126,234,0.15) 0%, rgba(118,75,162,0.15) 100%);
+    .playlist-info { flex: 1; min-width: 0; }
+    .playlist-name {
+      font-weight: 600; font-size: 14px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .playlist-item-cover {
-      width: 40px;
-      height: 40px;
-      border-radius: 6px;
-      object-fit: cover;
-      background: #eee;
+    .playlist-meta {
+      font-size: 11px; color: #999; margin-top: 2px;
     }
-    .playlist-item-info {
-      flex: 1;
-      min-width: 0;
+    .playlist-load-btn, .playlist-del {
+      background: none; border: none;
+      cursor: pointer; padding: 4px 6px; font-size: 16px;
+      transition: color 0.2s;
     }
-    .playlist-item-title {
-      font-size: 13px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .playlist-item-author {
-      font-size: 11px;
-      color: #888;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .playlist-item-remove {
-      opacity: 0;
-      background: none;
-      border: none;
-      color: #999;
-      cursor: pointer;
-      padding: 4px 8px;
-      font-size: 14px;
-    }
-    .playlist-item:hover .playlist-item-remove {
-      opacity: 1;
-    }
-    .playlist-item-remove:hover {
-      color: #f5576c;
-    }
-    .empty-state {
-      text-align: center;
-      padding: 30px;
-      color: #888;
-    }
-    .empty-state p {
-      margin-top: 8px;
-      font-size: 13px;
-    }
-    .footer {
-      text-align: center;
-      padding: 12px;
-      color: rgba(255,255,255,0.8);
-      font-size: 11px;
-    }
-    .volume-control {
+    .playlist-load-btn { color: #667eea; }
+    .playlist-load-btn:hover { color: #764ba2; }
+    .playlist-del { color: #ccc; }
+    .playlist-del:hover { color: #f5576c; }
+
+    .song-item {
       display: flex;
       align-items: center;
-      gap: 8px;
-      margin-top: 8px;
-    }
-    .volume-slider {
-      flex: 1;
-      height: 4px;
-      background: #e0e0e0;
-      border-radius: 2px;
+      padding: 10px 16px;
+      gap: 10px;
       cursor: pointer;
+      transition: background 0.2s;
+      border-bottom: 1px solid #f5f5f5;
     }
-    .volume-fill {
-      height: 100%;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      border-radius: 2px;
-      width: 80%;
+    .song-item:last-child { border-bottom: none; }
+    .song-item:hover { background: #f5f5f5; }
+    .song-cover {
+      width: 36px; height: 36px;
+      border-radius: 6px; object-fit: cover;
+      background: #eee; flex-shrink: 0;
     }
+    .song-info { flex: 1; min-width: 0; }
+    .song-title {
+      font-size: 13px; font-weight: 500;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .song-author {
+      font-size: 11px; color: #999; margin-top: 2px;
+    }
+    .song-play-icon {
+      color: #667eea; font-size: 14px; opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .song-item:hover .song-play-icon { opacity: 1; }
+
+    .empty-state {
+      text-align: center; padding: 40px 20px; color: #888;
+    }
+    .empty-state .icon { font-size: 40px; margin-bottom: 8px; }
+    .empty-state p { font-size: 13px; }
+
+    .footer {
+      text-align: center; padding: 12px;
+      color: rgba(255,255,255,0.8); font-size: 11px;
+    }
+    .hidden { display: none; }
   </style>
 </head>
 <body>
-  <!-- <div class="header">
-    <h1>🎵 Music Play Online</h1>
-    <p>聚合多源音乐播放</p>
-  </div> -->
-
-  <div class="current-play">
-    <img class="current-cover" id="currentCover" src="" alt="">
-    <div class="current-info">
-      <div class="current-title" id="currentTitle">未播放</div>
-      <div class="current-author" id="currentAuthor">-</div>
-      <div class="controls">
-        <button class="control-btn" id="prevBtn"><i class="fa fa-step-backward"></i></button>
-        <button class="control-btn play" id="playBtn"><i class="fa fa-play"></i></button>
-        <button class="control-btn" id="nextBtn"><i class="fa fa-step-forward"></i></button>
-      </div>
-      <div class="volume-control">
-        <span style="font-size:12px"><i class="fa fa-volume-up"></i></span>
-        <div class="volume-slider" id="volumeSlider">
-          <div class="volume-fill" id="volumeFill"></div>
-        </div>
-      </div>
-    </div>
+  <div class="header">
+    <button class="header-btn" id="backBtn" disabled><i class="fa fa-arrow-left"></i> 返回</button>
+    <h1><i class="fa fa-music"></i> 我的歌单</h1>
+    <span style="width:60px"></span>
   </div>
 
-  <div class="mode-controls">
-    <span class="mode-label">播放模式</span>
-    <div class="mode-btns">
-      <button class="mode-btn active" data-mode="sequence">顺序</button>
-      <button class="mode-btn" data-mode="shuffle">随机</button>
-      <button class="mode-btn" data-mode="single">单曲</button>
-    </div>
-  </div>
-
-  <div class="playlist-section">
-    <div class="playlist-header">
-      <span class="playlist-title">播放列表 (<span id="playlistCount">0</span>)</span>
-      <button class="clear-btn" id="clearBtn">清空列表</button>
-    </div>
-    <div class="playlist-body" id="playlistBody">
+  <div class="view" id="playlistListView">
+    <div class="view-title"><i class="fa fa-list"></i> 已保存的歌单</div>
+    <div class="list-body" id="playlistListBody">
       <div class="empty-state">
-        <div style="font-size: 32px;">🎶</div>
-        <p>播放列表为空</p>
+        <div class="icon"><i class="fa fa-bookmark-o"></i></div>
+        <p>暂无保存的歌单<br><small style="color:#aaa">在页面浮动播放条中保存当前播放列表</small></p>
       </div>
+    </div>
+  </div>
+
+  <div class="view hidden" id="songListView">
+    <div class="view-title"><i class="fa fa-music" id="songListTitle"></i></div>
+    <div class="list-body" id="songListBody">
+      <div class="empty-state"><p>歌单为空</p></div>
     </div>
   </div>
 
   <div class="footer">
-    在歌曲宝等支持页面点击「添加到播放列表」按钮添加歌曲
+    点击歌曲播放 · 在页面浮动条保存歌单
   </div>
 
   <script src="popup.js"></script>

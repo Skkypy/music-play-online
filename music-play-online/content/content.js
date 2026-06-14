@@ -319,7 +319,10 @@
       <div class="mpo-playlist-panel">
         <div class="mpo-playlist-header">
           <span>播放列表 (<span class="mpo-count">0</span>)</span>
-          <button class="mpo-btn mpo-btn-secondary mpo-clear-btn" style="margin:0; padding: 4px 10px; font-size: 12px;">清空</button>
+          <div style="display:flex; gap:4px;">
+            <button class="mpo-btn mpo-btn-secondary mpo-save-playlist-btn" style="margin:0; padding: 4px 10px; font-size: 12px;">保存</button>
+            <button class="mpo-btn mpo-btn-secondary mpo-clear-btn" style="margin:0; padding: 4px 10px; font-size: 12px;">清空</button>
+          </div>
         </div>
         <div class="mpo-playlist-body"></div>
       </div>
@@ -345,6 +348,7 @@
     bar.querySelector('.playlist-btn').addEventListener('click', togglePlaylist);
     bar.querySelector('.mpo-progress-bar').addEventListener('click', seek);
     bar.querySelector('.mpo-clear-btn').addEventListener('click', clearPlaylist);
+    bar.querySelector('.mpo-save-playlist-btn').addEventListener('click', saveCurrentPlaylist);
 
     document.querySelectorAll('.mpo-mode-btn').forEach(btn => {
       btn.addEventListener('click', () => setPlayMode(btn.dataset.mode));
@@ -662,6 +666,23 @@
     updateUI();
   }
 
+  function saveCurrentPlaylist() {
+    if (playlist.length === 0) return;
+    const name = prompt('请输入歌单名称：', '我的歌单 ' + new Date().toLocaleDateString());
+    if (!name) return;
+    chrome.runtime.sendMessage({
+      action: 'savePlaylist',
+      name: name,
+      songs: playlist
+    }, (response) => {
+      if (response?.success) {
+        const btn = document.querySelector('.mpo-save-playlist-btn');
+        btn.textContent = '已保存';
+        setTimeout(() => { btn.textContent = '保存'; }, 2000);
+      }
+    });
+  }
+
   function addToPlaylist(music) {
     if (!music || !music.id) {
       console.log('MPO: music or music.id is invalid', music);
@@ -709,6 +730,17 @@
           break;
         case 'playMusic':
           playMusicFromMessage(request.music);
+          sendResponse({ success: true });
+          break;
+        case 'loadPlaylist':
+          if (request.songs && request.songs.length > 0) {
+            playlist = request.songs.map(s => ({ ...s }));
+            currentIndex = request.playIndex !== undefined ? request.playIndex : 0;
+            if (playMode === PlayMode.SHUFFLE) generateShuffledIndices();
+            saveState();
+            updateUI();
+            playByIndex(currentIndex);
+          }
           sendResponse({ success: true });
           break;
       }

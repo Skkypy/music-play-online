@@ -1,6 +1,7 @@
 const PLAYLIST_KEY = 'music_playlist';
 const PLAY_MODE_KEY = 'play_mode';
 const CURRENT_INDEX_KEY = 'current_index';
+const SAVED_PLAYLISTS_KEY = 'saved_playlists';
 
 const PlayMode = {
   SEQUENCE: 'sequence',
@@ -42,6 +43,14 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   }
 });
 
+function getActiveTab() {
+  return new Promise(resolve => {
+    chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+      resolve(tabs[0] || null);
+    });
+  });
+}
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   switch (request.action) {
     case 'getState':
@@ -54,9 +63,50 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       });
       return true;
 
-    case 'getAudioUrl':
-      fetchAudioUrlFromGequbao(request.musicId).then(url => {
-        sendResponse(url);
+    case 'getSavedPlaylists':
+      chrome.storage.local.get([SAVED_PLAYLISTS_KEY], (result) => {
+        sendResponse(result[SAVED_PLAYLISTS_KEY] || []);
+      });
+      return true;
+
+    case 'savePlaylist':
+      chrome.storage.local.get([SAVED_PLAYLISTS_KEY], (result) => {
+        const playlists = result[SAVED_PLAYLISTS_KEY] || [];
+        const newPlaylist = {
+          id: 'pl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+          name: request.name,
+          songs: request.songs,
+          createdAt: Date.now()
+        };
+        playlists.push(newPlaylist);
+        chrome.storage.local.set({ [SAVED_PLAYLISTS_KEY]: playlists }, () => {
+          sendResponse({ success: true, playlist: newPlaylist });
+        });
+      });
+      return true;
+
+    case 'deletePlaylist':
+      chrome.storage.local.get([SAVED_PLAYLISTS_KEY], (result) => {
+        const playlists = result[SAVED_PLAYLISTS_KEY] || [];
+        const filtered = playlists.filter(p => p.id !== request.playlistId);
+        chrome.storage.local.set({ [SAVED_PLAYLISTS_KEY]: filtered }, () => {
+          sendResponse({ success: true });
+        });
+      });
+      return true;
+
+    case 'loadPlaylist':
+      getActiveTab().then(tab => {
+        if (tab) {
+          chrome.tabs.sendMessage(tab.id, {
+            action: 'loadPlaylist',
+            songs: request.songs,
+            playIndex: request.playIndex || 0
+          });
+          sendResponse({ success: true });
+        } else {
+          sendResponse({ success: false, error: 'No active tab' });
+        }
       });
       return true;
 
@@ -75,43 +125,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
   return true;
 });
-
-async function fetchAudioUrlFromGequbao(musicId) {
-  console.log('Background: Fetching audio URL for', musicId);
-  try {
-    const response = await fetch(`https://www.gequbao.com/music/${musicId}`);
-    const html = await response.text();
-    console.log('Background: Got HTML length', html.length);
-
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
-    const downloadBtn = doc.querySelector('#btn-download-mp3');
-    console.log('Background: downloadBtn found:', downloadBtn ? 'yes' : 'no');
-    console.log('Background: downloadBtn href:', downloadBtn?.href);
-
-    if (downloadBtn && downloadBtn.href && downloadBtn.href !== window.location.href) {
-      return downloadBtn.href;
-    }
-
-    const audioEl = doc.querySelector('audio');
-    console.log('Background: audioEl found:', audioEl ? 'yes' : 'no');
-    console.log('Background: audioEl src:', audioEl?.src);
-
-    if (audioEl && audioEl.src) {
-      return audioEl.src;
-    }
-
-    const pageAudio = doc.querySelector('#custom-audio-player');
-    console.log('Background: pageAudio found:', pageAudio ? 'yes' : 'no');
-    console.log('Background: pageAudio src:', pageAudio?.src);
-    if (pageAudio && pageAudio.src) {
-      return pageAudio.src;
-    }
-  } catch (error) {
-    console.error('Background fetch error:', error);
-  }
-  return null;
-}
 
 async function fetchMusicInfo(musicId) {
   try {
